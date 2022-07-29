@@ -1,0 +1,48 @@
+---
+title: "scratch_formulas"
+author: "Chandler Sutherland"
+date: '2022-07-29'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+```
+
+## Functions
+Let's start building some functions in a format I am more comfortable with. 
+
+First, we need to read in the excel file in colony_count. Beginning with 07/29/2022 counted HsAPOBEC and PmCDA1 on Rosetta2 
+```{r}
+df <- readxl::read_xlsx(path="C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\Colony_count_excel\\07292022_HsAPOBEC_PmCDA1_Rosetta2.xlsx")
+
+#split by construct 
+HsAPOBEC <- df %>% filter(construct=='HsAPOBEC') %>% filter(CFU!='TITC' & CFU!='TNTC')
+PmCDA1 <- df %>% filter(construct=='PmCDA1') %>% filter(CFU!='TITC' & CFU!='TNTC')
+
+HsAPOBEC$CFU <- as.numeric(HsAPOBEC$CFU)
+PmCDA1$CFU <- as.numeric(PmCDA1$CFU)
+```
+
+```{r}
+HsAPOBEC_summary <- HsAPOBEC %>% group_by(plate,induction,dilution_factor) %>%
+  summarizeFU.mean=mean(CFU), 
+            CFU.sd=sd(CFU), 
+            CFU.n=n(),
+            CFU.se=CFU.sd/sqrt(CFU.n))
+PmCDA1_summary <- PmCDA1 %>% group_by(plate,induction,dilution_factor) %>%
+  summarize(CFU.mean=mean(CFU), 
+            CFU.sd=sd(CFU), 
+            CFU.n=n(),
+            CFU.se=CFU.sd/sqrt(CFU.n))
+```
+
+The standard deviation is a measure of variability. The SD of a sample is an estimate of variability of the poulation from which the sample was drawn. 
+
+The standard error describes how much the sample mean varies from the standard deviatio of this sampling distribution, which is the SE of the estiamte of the mean. 
+
+The LB_KAN replicates are from the same dilution series, so that is a really tight technical replicate between plating efficiencies. The LB_RIF_KAN were at least different aliquots, so that noise is from how shaken the cultures were, my pipetting accuracy, and plating efficiency. And some time in between sampling (30 minutes at RT). So I am interested in the SD to look at differences across these conditions, but more generally the SE to see how close I am to my population mean. Biological replicates would be different cultures. 
+
+
