@@ -18,17 +18,23 @@ First, we need to read in the excel file in colony_count. Beginning with 07/29/2
 ```{r}
 df <- readxl::read_xlsx(path="C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\Colony_count_excel\\07292022_HsAPOBEC_PmCDA1_Rosetta2.xlsx")
 
-#split by construct 
-HsAPOBEC <- df %>% filter(construct=='HsAPOBEC') %>% filter(CFU!='TITC' & CFU!='TNTC')
-PmCDA1 <- df %>% filter(construct=='PmCDA1') %>% filter(CFU!='TITC' & CFU!='TNTC')
+#remove too many or too few colonies
+##add if statement to do it for me
+TITC <- df %>% filter(CFU=='TITC') %>% count()
+TNTC <- df %>% filter(CFU=='TNTC') %>% count()
+paste(TITC$n, "plates removed for insufficient colonies to count, ", TNTC$n, "plates removed for too many colonies to count.")
+df <- df %>% filter(CFU!='TITC' & CFU!='TNTC')
+df$CFU <- as.numeric(df$CFU)
 
-HsAPOBEC$CFU <- as.numeric(HsAPOBEC$CFU)
-PmCDA1$CFU <- as.numeric(PmCDA1$CFU)
+#split by construct 
+HsAPOBEC <- df %>% filter(construct=='HsAPOBEC')
+PmCDA1 <- df %>% filter(construct=='PmCDA1') 
 ```
 
 ```{r}
+#this could be done in a function to form these 
 HsAPOBEC_summary <- HsAPOBEC %>% group_by(plate,induction,dilution_factor) %>%
-  summarizeFU.mean=mean(CFU), 
+  summarize(CFU.mean=mean(CFU), 
             CFU.sd=sd(CFU), 
             CFU.n=n(),
             CFU.se=CFU.sd/sqrt(CFU.n))
@@ -39,10 +45,94 @@ PmCDA1_summary <- PmCDA1 %>% group_by(plate,induction,dilution_factor) %>%
             CFU.se=CFU.sd/sqrt(CFU.n))
 ```
 
+
+With this information, is there a statistical difference between induced and uninduced in each condition? 
+```{r}
+##has to be a cleaner way to do this 
+##also is this the correct kind of t test to do?
+apo_LB_KAN <- HsAPOBEC %>% filter(plate == 'LB_KAN')
+apo_LB_KAN_t <- t.test(CFU ~ induction, data=apo_LB_KAN)$p.value
+apo_LB_RIF_KAN <- HsAPOBEC %>% filter(plate == 'LB_RIF_KAN')
+apo_LB_RIF_KAN_t <- t.test(CFU ~ induction, data=apo_LB_RIF_KAN)$p.value
+
+print(paste("The HsAPOBEC uninduced vs induced CFU/mL on LB KAN mean is not significantly different (barely) with a p value of", apo_LB_KAN_t, ". It is also an insignificant difference on LB RIF KAN, with a p value of", apo_LB_RIF_KAN_t))
+```
+
+```{r}
+cda_LB_KAN <- PmCDA1 %>% filter(plate == 'LB_KAN')
+cda_LB_KAN_t <- t.test(CFU ~ induction, data=cda_LB_KAN)$p.value
+cda_LB_RIF_KAN <- PmCDA1 %>% filter(plate == 'LB_RIF_KAN')
+cda_LB_RIF_KAN_t <- t.test(CFU ~ induction, data=cda_LB_RIF_KAN)$p.value
+cda_LB_KAN_t
+paste("The PmCDA1 CFUs/mL on LB KAN and LB RIF KAN means are significantly different, with p values of ", cda_LB_KAN_t, "and", cda_LB_RIF_KAN_t, "respectively.")
+```
+```{r}
+ggplot(apo_LB_KAN, 
+       aes(x=reorder(induction,-CFU), y=CFU, fill=induction)) + 
+  geom_boxplot() + 
+  geom_jitter() +
+  labs(x = 'induction', y='CFUs/mL', title="HsAPOBEC on LB KAN")
+
+ggplot(apo_LB_RIF_KAN, 
+       aes(x=reorder(induction, CFU), y=CFU, fill=induction)) + 
+  geom_boxplot()+
+  geom_jitter()+
+  labs(x = 'induction', y='CFUs/mL', title="HsAPOBEC on LB RIF KAN")
+
+#This forces uninduced before induced
+HsAPOBEC$induction <- factor(HsAPOBEC$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+PmCDA1$induction <- factor(PmCDA1$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+
+#plot
+ggplot(HsAPOBEC, aes(x=induction, y=CFU, fill=induction)) + 
+  geom_boxplot() + 
+  facet_wrap(~plate, scales='free') +
+  geom_jitter() +
+  labs(x = 'induction', y='CFUs/mL', title="HsAPOBEC")
+
+```
+```{r}
+ggplot(PmCDA1, aes(x=induction, y=CFU, fill=induction)) + 
+  geom_boxplot() + 
+  facet_wrap(~plate, scales='free') +
+  geom_jitter() +
+  labs(x = 'induction', y='CFUs/mL', title="PmCDA1")
+```
+```{r}
+HsAPOBEC_summary$induction <- factor(HsAPOBEC_summary$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+ggplot(HsAPOBEC_summary, aes(x=induction, y=CFU.mean, fill=induction)) + 
+  geom_col() + 
+  geom_errorbar(aes(ymin=CFU.mean-CFU.se, ymax=CFU.mean+CFU.se), width=.2)+
+  facet_wrap(~plate, scales='free')+
+  labs(x = 'induction', y='CFUs/mL', title="HsAPOBEC on Rosetta2")
+```
+```{r}
+PmCDA1_summary$induction <- factor(PmCDA1_summary$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+ggplot(PmCDA1_summary, aes(x=induction, y=CFU.mean, fill=induction)) + 
+  geom_col() + 
+  geom_errorbar(aes(ymin=CFU.mean-CFU.se, ymax=CFU.mean+CFU.se), width=.2)+
+  facet_wrap(~plate, scales='free')+
+  labs(x = 'induction', y='CFUs/mL', title="PmCDA1 on Rosetta2")
+```
+
 The standard deviation is a measure of variability. The SD of a sample is an estimate of variability of the poulation from which the sample was drawn. 
 
 The standard error describes how much the sample mean varies from the standard deviatio of this sampling distribution, which is the SE of the estiamte of the mean. 
 
 The LB_KAN replicates are from the same dilution series, so that is a really tight technical replicate between plating efficiencies. The LB_RIF_KAN were at least different aliquots, so that noise is from how shaken the cultures were, my pipetting accuracy, and plating efficiency. And some time in between sampling (30 minutes at RT). So I am interested in the SD to look at differences across these conditions, but more generally the SE to see how close I am to my population mean. Biological replicates would be different cultures. 
+
+```{r}
+count_stats <- df %>% group_by(construct, plate, induction, dilution_factor)%>%
+  summarize(count.mean=mean(count), 
+            count.sd=sd(count)) %>%
+  arrange(plate) %>% filter(count.mean!=0)
+
+#to compare the SDs between plates or constructs, the F test will tell me if there is statistically significant difference between my two variances. 
+LB_KAN <- count_stats[count_stats$plate == 'LB_KAN',][['count.sd']]
+LB_RIF_KAN <- count_stats[count_stats$plate == 'LB_RIF_KAN',][['count.sd']]
+var.test(LB_KAN, LB_RIF_KAN)
+
+#looks to be not statistically significant, but this test isn't very powerful. Try ANOVA also. 
+```
 
 
