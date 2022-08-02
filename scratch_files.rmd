@@ -34,15 +34,25 @@ PmCDA1 <- df %>% filter(construct=='PmCDA1')
 ```{r}
 #this could be done in a function to form these 
 HsAPOBEC_summary <- HsAPOBEC %>% group_by(plate,induction,dilution_factor) %>%
-  summarize(CFU.mean=mean(CFU), 
+  summarize(CFU.mean=mean(CFU),
+            CFU.median=median(CFU),
             CFU.sd=sd(CFU), 
             CFU.n=n(),
             CFU.se=CFU.sd/sqrt(CFU.n))
 PmCDA1_summary <- PmCDA1 %>% group_by(plate,induction,dilution_factor) %>%
   summarize(CFU.mean=mean(CFU), 
+            CFU.median=median(CFU),
             CFU.sd=sd(CFU), 
             CFU.n=n(),
             CFU.se=CFU.sd/sqrt(CFU.n))
+```
+```{r}
+un_mut_freq <- HsAPOBEC_summary[[1,5]]/HsAPOBEC_summary[[3,5]]
+in_mut_freq <- HsAPOBEC_summary[[2,5]]/HsAPOBEC_summary[[3,5]]
+paste("The mutation frequency, the median number of RifR colonies per viable cell, for HsAPOBEC is" , un_mut_freq , "for uninduced cultures and " , in_mut_freq , "for induced cultures. This was only for one biological rep, and it is recommended to do 8-12, which should reduce the variance.")
+pm_mut_freq <- PmCDA1_summary[[1,5]]/PmCDA1_summary[[3,5]]
+inpm_mut_freq <- PmCDA1_summary[[2,5]]/PmCDA1_summary[[3,5]]
+paste("The mutation frequency for PmCDA1 on Rosetta2 is ", pm_mut_freq, "for uninduced colonies and " ,inpm_mut_freq , "for induced colonies, because they were all dead.")
 ```
 
 
