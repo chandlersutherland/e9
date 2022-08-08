@@ -1,5 +1,5 @@
 ---
-title: "scratch_formulas"
+title: "controls"
 author: "Chandler Sutherland"
 date: '2022-07-29'
 output: html_document
@@ -12,50 +12,73 @@ library(ggplot2)
 ```
 
 ## Functions
-Let's start building some functions in a format I am more comfortable with. 
-
-First, we need to read in the excel file in colony_count. Beginning with 07/29/2022 counted HsAPOBEC and PmCDA1 on Rosetta2 
+Read in the excel file 
 ```{r}
-df <- readxl::read_xlsx(path="C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\Colony_count_excel\\07292022_HsAPOBEC_PmCDA1_Rosetta2.xlsx")
+df <- readxl::read_xlsx(path="C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\Colony_count_excel\\08062022_controls_Rosetta2.xlsx")
 
 #remove too many or too few colonies
+#not doing now since hand wavey test anyway and would lose all rif data 
 ##add if statement to do it for me
-TITC <- df %>% filter(CFU=='TITC') %>% count()
-TNTC <- df %>% filter(CFU=='TNTC') %>% count()
-paste(TITC$n, "plates removed for insufficient colonies to count, ", TNTC$n, "plates removed for too many colonies to count.")
-df <- df %>% filter(CFU!='TITC' & CFU!='TNTC')
-df$CFU <- as.numeric(df$CFU)
+#TITC <- df %>% filter(CFU=='TITC') %>% count()
+#TNTC <- df %>% filter(CFU=='TNTC') %>% count()
+#paste(TITC$n, "plates removed for insufficient colonies to count, ", TNTC$n, "plates removed for too many colonies to count.")
+#df <- df %>% filter(CFU!='TITC' & CFU!='TNTC')
+#df$CFU <- as.numeric(df$CFU)
 
-#split by construct 
-HsAPOBEC <- df %>% filter(construct=='HsAPOBEC')
-PmCDA1 <- df %>% filter(construct=='PmCDA1') 
+split <- df %>% split(f=list(df$construct, df$strain))
+HsAID <- split[[1]]
+HsApo <- split[[2]]
+HsCDD <- split[[3]]
+PmCDA <- split[[4]]
+HsApo_p <- split[[6]]
+
+constructs <- list(HsAID = HsAID, HsApo = HsApo, HsCDD = HsCDD, PmCDA = PmCDA, HsApo_p = HsApo_p)
 ```
 
 ```{r}
-#this could be done in a function to form these 
-HsAPOBEC_summary <- HsAPOBEC %>% group_by(plate,induction,dilution_factor) %>%
-  summarize(CFU.mean=mean(CFU),
-            CFU.median=median(CFU),
-            CFU.sd=sd(CFU), 
-            CFU.n=n(),
-            CFU.se=CFU.sd/sqrt(CFU.n))
-PmCDA1_summary <- PmCDA1 %>% group_by(plate,induction,dilution_factor) %>%
-  summarize(CFU.mean=mean(CFU), 
-            CFU.median=median(CFU),
-            CFU.sd=sd(CFU), 
-            CFU.n=n(),
-            CFU.se=CFU.sd/sqrt(CFU.n))
-```
-```{r}
-#HsAPOBEC_summary[[3,5]]
-in_mut_freq <- HsAPOBEC_summary[[3,5]]/HsAPOBEC_summary[[1,5]]
-un_mut_freq <- HsAPOBEC_summary[[4,5]]/HsAPOBEC_summary[[2,5]]
-paste("The mutation frequency, the median number of RifR colonies per viable cell, for HsAPOBEC is" , un_mut_freq , "for uninduced cultures and " , in_mut_freq , "for induced cultures. This was only for one biological rep, and it is recommended to do 8-12, which should reduce the variance.")
-pm_mut_freq <- PmCDA1_summary[[5,5]]/PmCDA1_summary[[2,5]]
-inpm_mut_freq <- PmCDA1_summary[[3,5]]/PmCDA1_summary[[1,5]]
-paste("The mutation frequency for PmCDA1 on Rosetta2 is ", pm_mut_freq, "for uninduced colonies and " ,inpm_mut_freq , "for induced colonies, because they were all dead.")
+summary_ize <- function(x){
+  #this function takes in a dataframe, and outputs the summary I am interested in. 
+  summary <- x %>% group_by(plate,induction)%>%
+    summarize(CFU.mean=mean(CFU),
+              CFU.median=median(CFU),
+              CFU.sd=sd(CFU),
+              CFU.n=n(),
+              CFU.se=CFU.sd/sqrt(CFU.n))
+  summary
+}
+
+
+construct_summary <- lapply(constructs, summary_ize)
+construct_summary %>% names()
 ```
 
+```{r}
+#The mutation frequency for a given condition is the median CFU RIF R/LB_KAN 
+HsAID_summary <- construct_summary$HsAID 
+construct_summary$HsApo_p
+
+#This function calculates the mutation frequency. Caution: not vague enough to handle different plate names, so have to do pLysS by hand 
+mut_freq <- function(x){
+  un_mut_freq <- x[x$plate=='LB_RIF_KAN'& x$induction == 'uninduced',"CFU.median"][[1]]/
+    x[x$plate=='LB_KAN'& x$induction == 'uninduced', "CFU.median"][[1]]
+  
+  in_mut_freq <- x[x$plate=='LB_RIF_KAN'& HsAID_summary$induction == 'induced', "CFU.median"][[1]]/
+    x[x$plate=='LB_KAN'& x$induction == 'induced', "CFU.median"][[1]]
+  list(un_mut_freq=un_mut_freq, in_mut_freq=in_mut_freq)
+}
+
+mut_freqs <- lapply(construct_summary, mut_freq)
+do.call(rbind, mut_freqs) 
+
+#for apobec_p 
+HsApo_summary <- construct_summary$HsApo_p
+un_mut_freq <- HsApo_summary[HsApo_summary$plate=='LB_RIF_CAM_KAN'& HsApo_summary$induction == 'uninduced',"CFU.median"][[1]]/
+    HsApo_summary[HsApo_summary$plate=='LB_CAM_KAN'& HsApo_summary$induction == 'uninduced', "CFU.median"][[1]]
+
+in_mut_freq <- HsApo_summary[HsApo_summary$plate=='LB_RIF_CAM_KAN'& HsApo_summary$induction == 'induced',"CFU.median"][[1]]/
+    HsApo_summary[HsApo_summary$plate=='LB_CAM_KAN'& HsApo_summary$induction == 'induced', "CFU.median"][[1]]
+```
+The only case where the induced mutation frequency is > the uninduced is HsCDD. HsAID the uninduced has a higer baseline mutation frequency though. Caveats: combining two different dilutions of RIF colonies, only two reps of those, almost all are TITC. 
 
 With this information, is there a statistical difference between induced and uninduced in each condition? 
 ```{r}
@@ -77,6 +100,7 @@ cda_LB_RIF_KAN_t <- t.test(CFU ~ induction, data=cda_LB_RIF_KAN)$p.value
 cda_LB_KAN_t
 paste("The PmCDA1 CFUs/mL on LB KAN and LB RIF KAN means are significantly different, with p values of ", cda_LB_KAN_t, "and", cda_LB_RIF_KAN_t, "respectively.")
 ```
+
 ```{r}
 ggplot(apo_LB_KAN, 
        aes(x=reorder(induction,-CFU), y=CFU, fill=induction)) + 
