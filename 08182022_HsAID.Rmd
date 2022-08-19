@@ -1,0 +1,175 @@
+---
+title: "HsAID"
+author: "Chandler Sutherland"
+date: '2022-08-19'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(gridExtra)
+```
+
+Read in the excel file 
+```{r}
+df <- readxl::read_xlsx(path="C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\Colony_count_excel\\08182022_HsAID_Rosetta2_pLysS.xlsx")
+
+#remove too many or too few colonies
+#not doing now since hand wavey test anyway and would lose all rif data 
+
+TITC <- df %>% filter(count=='TITC') %>% count()
+TNTC <- df %>% filter(count=='TNTC') %>% count()
+paste(TITC$n, "plates removed for insufficient colonies to count, ", TNTC$n, "plates removed for too many colonies to count.")
+df <- df %>% filter(count!='TITC' & count!='TNTC')
+df$count <- as.numeric(df$count)
+
+split <- df %>% split(f=list(df$strain))
+R2 <- split[[1]]
+R2_p <- split[[2]]
+
+constructs <- list(R2 = R2, R2_p = R2_p)
+```
+
+#Since I have tech reps, I have to average them before doing my typical median thing 
+```{r}
+#average tech reps, then calculate mut freq for each one
+R2_avg <- constructs[[1]] %>% group_by(plate, induction, culture) %>% summarize(tech.mean=mean(CFU))
+lb_kan <- R2_avg[which(R2_avg$plate == 'LB_KAN'),]$tech.mean
+lb_rif_kan <- R2_avg[which(R2_avg$plate == 'LB_RIF_KAN'),]$tech.mean
+mut_freq = lb_rif_kan/lb_kan
+R2_mut <- R2_avg %>% group_by(induction, culture) %>% summarize(n=n())
+R2_mut$mut_freq <- mut_freq
+R2_mut
+
+R2_p_avg <- constructs[[2]] %>% group_by(plate, induction, culture) %>% summarize(tech.mean=mean(CFU))
+lb_cam_kan <- R2_p_avg[which(R2_p_avg$plate == 'LB_CAM_KAN'),]$tech.mean
+lb_rif_cam_kan <- R2_p_avg[which(R2_p_avg$plate == 'LB_RIF_KAN_CAM'),]$tech.mean
+mut_freq = lb_rif_cam_kan/lb_cam_kan
+R2_p_mut <- R2_p_avg %>% group_by(induction, culture) %>% summarize(n=n())
+R2_p_mut$mut_freq <- mut_freq
+R2_p_mut
+```
+
+```{r}
+R2 <- R2_mut %>% group_by(induction) %>% summarize(median.mut_freq = median(mut_freq), 
+                                                   mean.mut_freq = mean(mut_freq),
+                                                   sd.mut_freq = sd(mut_freq), 
+                                                   n.mut_freq = n())
+R2$strain <- c('Rosetta2', 'Rosetta2')
+R2_p <- R2_p_mut %>% group_by(induction) %>% summarize(median.mut_freq = median(mut_freq), 
+                                                       mean.mut_freq = mean(mut_freq),
+                                                       sd.mut_freq = sd(mut_freq), 
+                                                       n.mut_freq = n())
+R2_p$strain <- c('Rosetta2_pLysS', 'Rosetta2_pLysS')
+median.mut_freq <- rbind(R2, R2_p)
+median.mut_freq
+```
+The induced mut freq in R2_pLysS is greater than uninduced, but has pretty big sd 
+
+Culture 3 in pLysS is a bit of an outlier, and some dried up plates on the uninduced side so many be distorting 
+```{r}
+R2_p_filt <- R2_p_mut %>% filter(culture != 3) %>% group_by(induction) %>% summarize(median.mut_freq = median(mut_freq), 
+                                                       mean.mut_freq = mean(mut_freq),
+                                                       sd.mut_freq = sd(mut_freq), 
+                                                       n.mut_freq = n())
+
+R2_p_filt
+
+```
+Ok, that brings down the sd to a normal amount
+
+
+With this information, is there a statistical difference between induced and uninduced in each condition? 
+```{r}
+#t test time 
+
+R2_t <- t.test(mut_freq ~ induction, data=R2_mut)$p.value
+R2_p_t <- t.test(mut_freq ~ induction, data=R2_p_mut)$p.value
+R2_p_filt_t <- t.test(mut_freq ~ induction, data=R2_p_mut %>% filter(culture != 3))$p.value
+print(paste("HsAID does not show significant increase in mutation frequency in either condition, with a p value of ", R2_t, "in Rosetta2 and ", R2_p_t, "in Rosetta2 + pLysS. Removing culture 3 does not change significance, with a p value of", R2_p_filt_t))
+```
+
+```{r}
+#This forces uninduced before induced
+R2_mut$induction <- factor(R2_mut$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+R2_p_mut$induction <- factor(R2_p_mut$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+
+#plot as boxplots 
+R2_plot <- ggplot(R2_mut, 
+       aes(x=reorder(induction,-mut_freq), y=mut_freq, fill=induction)) + 
+  geom_boxplot() + 
+  geom_jitter() +
+  labs(x = 'induction', y='mutation frequency', title="HsAID+Rosetta2")
+
+R2_p_plot <- ggplot(R2_p_mut, 
+       aes(x=reorder(induction, mut_freq), y=mut_freq, fill=induction)) + 
+  geom_boxplot()+
+  geom_jitter()+
+  labs(x = 'induction', y='mutation frequency', title="HsAID+Rosetta2 pLysS")
+
+#without culture 3
+R2_p_filt_plot <- ggplot(R2_p_mut %>% filter(culture != 3), 
+       aes(x=reorder(induction, mut_freq), y=mut_freq, fill=induction)) + 
+  geom_boxplot()+
+  geom_jitter()+
+  labs(x = 'induction', y='mutation frequency', title="HsAID+Rosetta2 pLysS")
+
+R2_p_filt_mut <- R2_p_mut %>% filter(culture != 3)
+R2_mut$strain <- 'Rosetta2'
+R2_p_filt_mut$strain <- 'Rosetta2_pLysS'
+
+R2_mut$induction <- factor(R2_mut$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+R2_p_filt_mut$induction <- factor(R2_p_filt_mut$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+
+ggplot(rbind(R2_mut,R2_p_filt_mut), aes(x=induction, y=mut_freq, fill=induction, label=culture)) + 
+  geom_boxplot() + 
+  facet_wrap(~strain) +
+  geom_jitter() +
+  labs(x = 'induction', y='mutation frequency', title="HsAID")
+```
+
+What if I remove rep3 that seems to be introducing a lot of noise to R2_pLysS?
+
+```{r}
+ggplot(rbind(R2_mut, R2_p_mut %>% filter(culture != 3)), aes(x=induction, y=mut_freq, fill=induction, label=culture)) + 
+  geom_boxplot() + 
+  facet_wrap(~strain) +
+  geom_point() +
+  geom_text()+
+  labs(x = 'induction', y='mutation frequency', title="HsAID")
+```
+Looks tighter, but still not statistically significant.  
+
+
+Because I did try this before, I can load in some previous HsAID and see a true bio rep 
+```{r}
+df2 <- readxl::read_xlsx(path="C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\Colony_count_excel\\02042022_HsAID_Rosetta2p.xlsx")
+df2 <- df2 %>% filter(plate != 'LB')
+
+#all tech reps 
+df2_avg <- df2 %>% group_by(plate, induction) %>% summarize(tech.mean=mean(CFU))
+lb_cam_kan <- df2_avg[which(df2_avg$plate == 'LB_CAM_KAN'),]$tech.mean
+lb_rif_cam_kan <- df2_avg[which(df2_avg$plate == 'LB_RIF_CAM_KAN'),]$tech.mean
+mut_freq = lb_rif_cam_kan/lb_cam_kan
+df2_mut <- df2_avg %>% group_by(induction) %>% summarize(n=n())
+df2_mut$mut_freq <- mut_freq
+df2_mut$culture <- 7
+df2_mut$strain <- 'Rosetta2_pLysS'
+
+
+ggplot(rbind(df2_mut, R2_p_filt_mut), aes(x=induction, y=mut_freq, fill=induction, label=culture)) + 
+  geom_boxplot() + 
+  facet_wrap(~strain) +
+  geom_point() +
+  geom_text()+
+  labs(x = 'induction', y='mutation frequency', title="HsAID")
+```
+
+Wow, looks really clean. Nice. 
