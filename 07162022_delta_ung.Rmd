@@ -1,0 +1,55 @@
+---
+title: "07162022"
+author: "Chandler Sutherland"
+date: '2022-07-29'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+```
+
+## Functions
+Read in the excel file 
+```{r}
+df <- readxl::read_xlsx(path="C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\Colony_count_excel\\07162022_HsAID_HsAPOBEC2_PmCDA1_delta_ung.xlsx")
+
+#remove too many or too few colonies
+#not doing now since hand wavey test anyway and would lose all rif data 
+##add if statement to do it for me
+TITC <- df %>% filter(CFU=='TITC') %>% count()
+TNTC <- df %>% filter(CFU=='TNTC') %>% count()
+paste(TITC$n, "plates removed for insufficient colonies to count, ", TNTC$n, "plates removed for too many colonies to count.")
+df <- df %>% filter(CFU!='TITC' & CFU!='TNTC')
+df$CFU <- as.numeric(df$CFU)
+
+df
+```
+As I now know, all these reps are tech reps so I will average them 
+```{r}
+#average tech reps, then calculate mut freq for each one
+constructs_avg <- df %>% group_by(construct, plate, induction) %>% summarize(tech.mean=mean(CFU), 
+                                                                             tech.n=n(), 
+                                                                             tech.sd=sd(CFU))
+lb_cam_kan <- constructs_avg[which(constructs_avg$plate == 'LB_CAM_KAN'),]$tech.mean
+lb_rif_cam_kan <- constructs_avg[which(constructs_avg$plate == 'LB_RIF_CAM_KAN'),]$tech.mean
+mut_freq = lb_rif_cam_kan/lb_cam_kan
+constructs_mut <- constructs_avg %>% group_by(construct, induction) %>% summarize(n=n())
+constructs_mut$mut_freq <- mut_freq
+```
+df2$variable2 <- with(df2, relevel(variable, "vph.shr"))
+ggplot(df2, aes(variable2, value)) + geom_boxplot()
+```{r}
+#This forces uninduced before induced
+constructs_mut$induction <- factor(constructs_mut$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+#R2_p_mut$induction <- factor(R2_p_mut$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+ggplot(constructs_mut,
+       aes(x=induction, y=mut_freq, fill=induction))+
+  geom_boxplot()+
+  facet_wrap(~construct)+
+  labs(x = 'induction', y='mutation frequency', title="ecoli delta ung")
+```
+
+
