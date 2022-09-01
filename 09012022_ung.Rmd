@@ -1,7 +1,7 @@
 ---
-title: "07162022"
+title: "09012022_delta_ung"
 author: "Chandler Sutherland"
-date: '2022-07-29'
+date: '2022-09-01'
 output: html_document
 ---
 
@@ -9,41 +9,40 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(ggplot2)
-library(xlsx)
 ```
 
 ## Functions
 Read in the excel file 
 ```{r}
-df <- readxl::read_xlsx(path="C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\Colony_count_excel\\07162022_HsAID_HsAPOBEC2_PmCDA1_delta_ung.xlsx")
+df <- readxl::read_xlsx(path="C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\Colony_count_excel\\09012022_HsAPOBEC2_PmCDA1_ung.xlsx")
 
 #remove too many or too few colonies
 #not doing now since hand wavey test anyway and would lose all rif data 
 ##add if statement to do it for me
-TITC <- df %>% filter(CFU=='TITC') %>% count()
-TNTC <- df %>% filter(CFU=='TNTC') %>% count()
+TITC <- df %>% filter(count=='TITC') %>% count()
+TNTC <- df %>% filter(count=='TNTC') %>% count()
 paste(TITC$n, "plates removed for insufficient colonies to count, ", TNTC$n, "plates removed for too many colonies to count.")
-df <- df %>% filter(CFU!='TITC' & CFU!='TNTC')
+df <- df %>% filter(count!='TITC' & count!='TNTC')
+df$count <- as.numeric(df$count)
 df$CFU <- as.numeric(df$CFU)
-
 df
 ```
-As I now know, all these reps are tech reps so I will average them 
+Average the technical replicates 
 ```{r}
 #average tech reps, then calculate mut freq for each one
 constructs_avg <- df %>% group_by(construct, plate, induction) %>% summarize(tech.mean=mean(CFU), 
                                                                              tech.n=n(), 
                                                                              tech.sd=sd(CFU))
+
+#calculate mutation frequency 
 lb_cam_kan <- constructs_avg[which(constructs_avg$plate == 'LB_CAM_KAN'),]$tech.mean
 lb_rif_cam_kan <- constructs_avg[which(constructs_avg$plate == 'LB_RIF_CAM_KAN'),]$tech.mean
 mut_freq = lb_rif_cam_kan/lb_cam_kan
 constructs_mut <- constructs_avg %>% group_by(construct, induction) %>% summarize(n=n())
 constructs_mut$mut_freq <- mut_freq
-
-
 ```
-df2$variable2 <- with(df2, relevel(variable, "vph.shr"))
-ggplot(df2, aes(variable2, value)) + geom_boxplot()
+
+
 ```{r}
 #This forces uninduced before induced
 constructs_mut$induction <- factor(constructs_mut$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
@@ -55,4 +54,29 @@ ggplot(constructs_mut,
   labs(x = 'induction', y='mutation frequency', title="ecoli delta ung")
 ```
 
+
+Copy in from 7.16
+
+
+## Functions
+Read in the excel file 
+```{r}
+rep_0716 <- readxl::read_xlsx(path="C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\e9\\07162022_summary_table.xlsx")
+
+rep_0716 <- rep_0716 %>% filter(construct != 'HsAID') %>% mutate(date='07162022')
+constructs_mut <- constructs_mut %>% mutate(date='09012022')
+
+reps <- rbind(rep_0716, constructs_mut)
+```
+
+```{r}
+#This forces uninduced before induced
+reps$induction <- factor(reps$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+#R2_p_mut$induction <- factor(R2_p_mut$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+ggplot(reps,
+       aes(x=induction, y=mut_freq, fill=induction))+
+  geom_boxplot()+
+  facet_wrap(~construct)+
+  labs(x = 'induction', y='mutation frequency', title="ecoli delta ung")
+```
 
