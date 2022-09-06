@@ -77,6 +77,30 @@ ggplot(reps,
        aes(x=induction, y=mut_freq, fill=induction))+
   geom_boxplot()+
   facet_wrap(~construct)+
+  geom_jitter()+
+  scale_y_log10()+
   labs(x = 'induction', y='mutation frequency', title="ecoli delta ung")
+```
+```{r}
+ggplot(reps,
+       aes(x=construct, y=mut_freq, fill=induction))+
+  geom_boxplot()+
+  geom_point(position=position_jitterdodge())+
+  scale_y_log10()+
+   theme(text = element_text(size = 20))+   
+  labs(y='Mutation frequency (log10 Rif resistant cfu -1)', x='')
+```
+```{r}
+reps %>% group_by(construct, induction) %>% summarize(bio.mean=mean(mut_freq), 
+                                                                             bio.n=n(), 
+                                                                             bio.sd=sd(mut_freq))
+```
+
+There's a lot of deviation in PmCDA1 induced, which I think is messing with the t test. 
+```{r}
+
+HsAPOBEC_t <- t.test(mut_freq ~ induction, data=reps %>% filter(construct == 'HsAPOBEC2'))$p.value
+PmCDA1_t <- t.test(mut_freq ~ induction, data=reps %>% filter(construct == 'PmCDA1'))$p.value
+print(paste("The p value for HsAPOBEC 2 is:", HsAPOBEC_t, "The p value for PmCDA1 is ", PmCDA1_t))
 ```
 
