@@ -51,11 +51,12 @@ ggplot(constructs_mut,
        aes(x=induction, y=mut_freq, fill=induction))+
   geom_boxplot()+
   facet_wrap(~construct)+
+  scale_y_log10()+
   labs(x = 'induction', y='mutation frequency', title="ecoli delta ung")
 ```
 
 
-Copy in from 7.16
+Copy in from 7.16 to plot both biological reps 
 
 
 ## Functions
