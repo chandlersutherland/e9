@@ -1,0 +1,56 @@
+---
+title: "09132022_ung"
+author: "Tonio Chaparro"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+```
+
+## Functions
+Read in the excel file 
+/Users/toniochaparro/Documents/Berkeley_Grad/Krasileva_Lab_Rotation/e9
+```{r}
+df <- readxl::read_xlsx(path="09122022_AtCDA1_AtCDAL1_ung.xlsx")
+
+#remove too many or too few colonies
+#not doing now since hand wavey test anyway and would lose all rif data 
+##add if statement to do it for me
+TITC <- df %>% filter(count=='TITC') %>% count()
+TNTC <- df %>% filter(count=='TNTC') %>% count()
+paste(TITC$n, "plates removed for insufficient colonies to count, ", TNTC$n, "plates removed for too many colonies to count.")
+df <- df %>% filter(count!='TITC' & count!='TNTC')
+df$count <- as.numeric(df$count)
+df$CFU <- as.numeric(df$CFU)
+df
+```
+Average the technical replicates 
+```{r}
+#average tech reps, then calculate mut freq for each one
+constructs_avg <- df %>% group_by(construct, plate, induction) %>% summarize(tech.mean=mean(CFU), tech.n=n(), tech.sd=sd(CFU))
+
+#calculate mutation frequency 
+lb_cam_kan <- constructs_avg[which(constructs_avg$plate == 'LB_CAM_KAN'),]$tech.mean
+lb_rif_cam_kan <- constructs_avg[which(constructs_avg$plate == 'LB_RIF_CAM_KAN'),]$tech.mean
+mut_freq = lb_rif_cam_kan/lb_cam_kan
+constructs_mut <- constructs_avg %>% group_by(construct, induction) %>% summarize(n=n())
+constructs_mut$mut_freq <- mut_freq
+```
+
+
+```{r}
+#This forces uninduced before induced
+constructs_mut$induction <- factor(constructs_mut$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+ggplot(constructs_mut,
+       aes(x=induction, y=mut_freq, fill=induction))+
+  geom_boxplot()+
+  facet_wrap(~construct)+
+  scale_y_log10()+
+  labs(x = 'induction', y='mutation frequency', title="ecoli delta ung")
+```
+
+
