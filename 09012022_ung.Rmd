@@ -9,6 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(ggplot2)
+library(openxlsx)
 ```
 
 ## Functions
@@ -91,6 +92,7 @@ ggplot(reps,
    theme(text = element_text(size = 20))+   
   labs(y='Mutation frequency (log10 Rif resistant cfu -1)', x='')
 ```
+
 ```{r}
 reps %>% group_by(construct, induction) %>% summarize(bio.mean=mean(mut_freq), 
                                                                              bio.n=n(), 
@@ -104,4 +106,12 @@ HsAPOBEC_t <- t.test(mut_freq ~ induction, data=reps %>% filter(construct == 'Hs
 PmCDA1_t <- t.test(mut_freq ~ induction, data=reps %>% filter(construct == 'PmCDA1'))$p.value
 print(paste("The p value for HsAPOBEC 2 is:", HsAPOBEC_t, "The p value for PmCDA1 is ", PmCDA1_t))
 ```
+
+```{r}
+#Write output of PmCDA1 to an excel to keep track across biological reps 
+PmCDA1 <- reps %>% filter(construct=='PmCDA1')
+
+write.xlsx(PmCDA1, "C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\colony_count_processing\\PmCDA1_ecoli_ung_reps.xlsx")
+```
+
 
