@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(ggplot2)
-library(xlsx)
+library(openxlsx)
 ```
 
 ## Functions
@@ -40,7 +40,7 @@ mut_freq = lb_rif_cam_kan/lb_cam_kan
 constructs_mut <- constructs_avg %>% group_by(construct, induction) %>% summarize(n=n())
 constructs_mut$mut_freq <- mut_freq
 
-
+write.xlsx(constructs_mut, "C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\e9\\07162022_summary_table.xlsx")
 ```
 df2$variable2 <- with(df2, relevel(variable, "vph.shr"))
 ggplot(df2, aes(variable2, value)) + geom_boxplot()
