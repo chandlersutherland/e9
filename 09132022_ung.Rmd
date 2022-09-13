@@ -45,6 +45,8 @@ constructs_mut$mut_freq <- mut_freq
 ```{r}
 #This forces uninduced before induced
 constructs_mut$induction <- factor(constructs_mut$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+
+#Plot 
 ggplot(constructs_mut,
        aes(x=induction, y=mut_freq, fill=induction))+
   geom_boxplot()+
@@ -53,4 +55,39 @@ ggplot(constructs_mut,
   labs(x = 'induction', y='mutation frequency', title="ecoli delta ung")
 ```
 
+
+Combine this PmCDA1 rep with the previous two 
+```{r}
+PmCDA1 <- readxl::read_xlsx(path= "C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\colony_count_processing\\PmCDA1_ecoli_ung_reps.xlsx")
+
+new_PmCDA1 <- constructs_mut %>% mutate(date='09122022') %>% filter(construct=='PmCDA1')
+reps <- rbind(PmCDA1, new_PmCDA1)
+```
+
+```{r}
+bio_summary <- reps %>% group_by(construct, induction) %>% summarize(bio.mean=mean(mut_freq), 
+                                                                             bio.n=n(), 
+                                                                             bio.sd=sd(mut_freq))
+
+PmCDA1_t <- t.test(mut_freq ~ induction, data=reps)$p.value
+bio_summary 
+
+print(paste("the p value for mutation frequency and induction in PmCDA1 in e. coli delta ung is ", PmCDA1_t))
+```
+
+
+Plot! 
+```{r}
+#This forces uninduced before induced
+reps$induction <- factor(reps$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+
+#Plot 
+ggplot(reps,
+       aes(x=induction, y=mut_freq, fill=induction, label=date))+
+  geom_boxplot()+
+  geom_jitter()+
+  geom_text()+
+  scale_y_log10()+
+  labs(x = 'induction', y='mutation frequency', title="PmCDA1 in ecoli delta ung")
+```
 
