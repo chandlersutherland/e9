@@ -62,6 +62,8 @@ PmCDA1 <- readxl::read_xlsx(path= "C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Re
 
 new_PmCDA1 <- constructs_mut %>% mutate(date='09122022') %>% filter(construct=='PmCDA1')
 reps <- rbind(PmCDA1, new_PmCDA1)
+
+
 ```
 
 ```{r}
@@ -89,5 +91,9 @@ ggplot(reps,
   geom_text()+
   scale_y_log10()+
   labs(x = 'induction', y='mutation frequency', title="PmCDA1 in ecoli delta ung")
+```
+
+```{r}
+write.xlsx(reps, "C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\colony_count_processing\\PmCDA1_ecoli_ung_reps.xlsx")
 ```
 
