@@ -68,7 +68,7 @@ mut_freq <- function(x){
 }
 
 mut_freqs <- lapply(construct_summary, mut_freq)
-do.call(rbind, mut_freqs) 
+freqs <- do.call(rbind, mut_freqs) 
 
 #for apobec_p 
 HsApo_summary <- construct_summary$HsApo_p
@@ -78,6 +78,12 @@ un_mut_freq <- HsApo_summary[HsApo_summary$plate=='LB_RIF_CAM_KAN'& HsApo_summar
 in_mut_freq <- HsApo_summary[HsApo_summary$plate=='LB_RIF_CAM_KAN'& HsApo_summary$induction == 'induced',"CFU.median"][[1]]/
     HsApo_summary[HsApo_summary$plate=='LB_CAM_KAN'& HsApo_summary$induction == 'induced', "CFU.median"][[1]]
 ```
+
+```{r}
+typeof(freqs)
+```
+
+
 The only case where the induced mutation frequency is > the uninduced is HsCDD. HsAID the uninduced has a higer baseline mutation frequency though. Caveats: combining two different dilutions of RIF colonies, only two reps of those, almost all are TITC. 
 
 With this information, is there a statistical difference between induced and uninduced in each condition? 
@@ -93,9 +99,9 @@ print(paste("The HsAPOBEC uninduced vs induced CFU/mL on LB KAN mean is not sign
 ```
 
 ```{r}
-cda_LB_KAN <- PmCDA1 %>% filter(plate == 'LB_KAN')
+cda_LB_KAN <- PmCDA %>% filter(plate == 'LB_KAN')
 cda_LB_KAN_t <- t.test(CFU ~ induction, data=cda_LB_KAN)$p.value
-cda_LB_RIF_KAN <- PmCDA1 %>% filter(plate == 'LB_RIF_KAN')
+cda_LB_RIF_KAN <- PmCDA %>% filter(plate == 'LB_RIF_KAN')
 cda_LB_RIF_KAN_t <- t.test(CFU ~ induction, data=cda_LB_RIF_KAN)$p.value
 cda_LB_KAN_t
 paste("The PmCDA1 CFUs/mL on LB KAN and LB RIF KAN means are significantly different, with p values of ", cda_LB_KAN_t, "and", cda_LB_RIF_KAN_t, "respectively.")
