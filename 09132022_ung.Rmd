@@ -68,6 +68,7 @@ reps <- rbind(PmCDA1, new_PmCDA1)
 
 ```{r}
 bio_summary <- reps %>% group_by(construct, induction) %>% summarize(bio.mean=mean(mut_freq), 
+                                                                     bio.median=median(mut_freq),
                                                                              bio.n=n(), 
                                                                              bio.sd=sd(mut_freq))
 
@@ -88,7 +89,7 @@ ggplot(reps,
        aes(x=induction, y=mut_freq, fill=induction, label=date))+
   geom_boxplot()+
   geom_jitter()+
-  geom_text()+
+#  geom_text()+
   scale_y_log10()+
   labs(x = 'induction', y='mutation frequency', title="PmCDA1 in ecoli delta ung")
 ```
