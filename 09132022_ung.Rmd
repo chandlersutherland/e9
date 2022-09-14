@@ -89,7 +89,7 @@ ggplot(reps,
        aes(x=induction, y=mut_freq, fill=induction, label=date))+
   geom_boxplot()+
   geom_jitter()+
-#  geom_text()+
+  geom_text()+
   scale_y_log10()+
   labs(x = 'induction', y='mutation frequency', title="PmCDA1 in ecoli delta ung")
 ```
