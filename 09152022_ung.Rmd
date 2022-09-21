@@ -28,26 +28,74 @@ df$count <- as.numeric(df$count)
 df$CFU <- as.numeric(df$CFU)
 df
 ```
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+Average the technical replicates 
+```{r}
+#average tech reps, then calculate mut freq for each one
+constructs_avg <- df %>% group_by(construct, plate, induction) %>% summarize(tech.mean=mean(CFU), tech.n=n(), tech.sd=sd(CFU))
+
+#calculate mutation frequency 
+lb_cam_kan <- constructs_avg[which(constructs_avg$plate == 'LB_CAM_KAN'),]$tech.mean
+lb_rif_cam_kan <- constructs_avg[which(constructs_avg$plate == 'LB_RIF_CAM_KAN'),]$tech.mean
+mut_freq = lb_rif_cam_kan/lb_cam_kan
+constructs_mut <- constructs_avg %>% group_by(construct, induction) %>% summarize(n=n())
+constructs_mut$mut_freq <- mut_freq
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r}
+#This forces uninduced before induced
+constructs_mut$induction <- factor(constructs_mut$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+#Plot 
+ggplot(constructs_mut,
+       aes(x=induction, y=mut_freq, fill=induction))+
+  geom_boxplot()+
+  facet_wrap(~construct)+
+  scale_y_log10()+
+  labs(x = 'induction', y='mutation frequency', title="ecoli delta ung")
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+Combine this PmCDA1 rep with the previous two 
+```{r}
+PmCDA1 <- readxl::read_xlsx(path= "C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\colony_count_processing\\PmCDA1_ecoli_ung_reps.xlsx")
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+new_PmCDA1 <- constructs_mut %>% mutate(date='09122022') %>% filter(construct=='PmCDA1')
+reps <- rbind(PmCDA1, new_PmCDA1)
+
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+bio_summary <- reps %>% group_by(construct, induction) %>% summarize(bio.mean=mean(mut_freq), 
+                                                                     bio.median=median(mut_freq),
+                                                                             bio.n=n(), 
+                                                                             bio.sd=sd(mut_freq))
+
+PmCDA1_t <- t.test(mut_freq ~ induction, data=reps)$p.value
+bio_summary 
+
+print(paste("the p value for mutation frequency and induction in PmCDA1 in e. coli delta ung is ", PmCDA1_t))
+```
+
+
+Plot! 
+```{r}
+#This forces uninduced before induced
+reps$induction <- factor(reps$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+
+#Plot 
+ggplot(reps,
+       aes(x=induction, y=mut_freq, fill=induction, label=date))+
+  geom_boxplot()+
+  geom_jitter()+
+  geom_text()+
+  scale_y_log10()+
+  labs(x = 'induction', y='mutation frequency', title="PmCDA1 in ecoli delta ung")
+```
+
+```{r}
+write.xlsx(reps, "C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\colony_count_processing\\PmCDA1_ecoli_ung_reps.xlsx")
+```
+
+
