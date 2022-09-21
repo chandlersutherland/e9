@@ -1,0 +1,53 @@
+---
+title: "09152022_ung"
+author: "Tonio Chaparro"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+```
+
+## Functions
+Read in the excel file 
+/Users/toniochaparro/Documents/Berkeley_Grad/Krasileva_Lab_Rotation/e9
+```{r}
+df <- readxl::read_xlsx(path="09122022_AtCDA1_AtCDAL1_ung.xlsx")
+
+#remove too many or too few colonies
+#not doing now since hand wavey test anyway and would lose all rif data 
+##add if statement to do it for me
+TITC <- df %>% filter(count=='TITC') %>% count()
+TNTC <- df %>% filter(count=='TNTC') %>% count()
+paste(TITC$n, "plates removed for insufficient colonies to count, ", TNTC$n, "plates removed for too many colonies to count.")
+df <- df %>% filter(count!='TITC' & count!='TNTC')
+df$count <- as.numeric(df$count)
+df$CFU <- as.numeric(df$CFU)
+df
+```
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
