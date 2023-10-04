@@ -1,0 +1,292 @@
+---
+title: "delta_ung_37_master"
+author: "Chandler Sutherland"
+date: "2023-04-14"
+output: html_document
+---
+Start doing all in one doc to make things simpler since the protocol has stabilized
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggplot2)
+library(ggsignif)
+library(ggpubr)
+library(scales)
+```
+
+```{r}
+df <- readxl::read_xlsx(path="C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\Colony_count_excel\\delta_ung_37_master.xlsx")
+
+#remove too many or too few colonies
+#not doing now since hand wavey test anyway and would lose all rif data 
+##add if statement to do it for me
+
+TITC <- df %>% filter(count=='TITC') %>% count()
+TNTC <- df %>% filter(count=='tntc') %>% count()
+paste(TITC$n, "plates removed for insufficient colonies to count, ", TNTC$n, "plates removed for too many colonies to count.")
+df <- df %>% filter(count!='TITC' & count!='tntc' &count!='titc') 
+df$count <- as.numeric(df$count)
+df$CFU <- as.numeric(df$CFU)
+df
+```
+```{r}
+constructs_mut <- df %>% filter(date_counted < 4212023) %>% group_by(construct, induction, `mut freq`) %>% summarize(n=n()) %>% drop_na()
+
+constructs_mut$induction <- factor(constructs_mut$induction, levels = c('uninduced', 'induced'), ordered=TRUE)
+constructs_mut$construct <- factor(constructs_mut$construct, levels=c('PmCDA1', 'HsAPOBEC2', 'CDA1', 'CDAL1', 'CDAL7', 'CDAL6', 'GSDA', 'TAD2'))
+
+ggplot(constructs_mut,
+       aes(x=induction, y=`mut freq`, fill=induction))+
+  geom_boxplot()+
+  facet_wrap(~construct)+
+  scale_y_log10()+
+  labs(x = 'induction', y='mutation frequency', title="ecoli delta ung")
+
+ggplot(constructs_mut,
+       aes(x=construct, y=`mut freq`, fill=induction))+
+  geom_point(position = position_dodge(width = 0.9))+
+  geom_boxplot()+
+#  geom_point()+
+ # facet_wrap(~construct)+
+  scale_y_log10()+
+  labs(x = 'induction', y='mutation frequency', title="ecoli delta ung")
+```
+
+Ok check out the 04212023 counts, which is everything and only induced 
+```{r}
+constructs_mut <- df %>% filter(date_counted == 4212023) %>% group_by(construct, induction, `mut freq`) %>% summarize(n=n()) %>% drop_na()
+constructs_mut
+
+constructs_mut$construct <- factor(constructs_mut$construct, levels=c('PmCDA1', 'HsAID', 'HsAPOBEC2', 'CDAL4', 'PyrD', 'CDAL3', 'CDAL1', 'A1B2', 'TAD1', 'A2', 'TAD3', 'CDAL2', 'CDAL6'))
+
+ggplot(constructs_mut,
+       aes(x=construct, y=`mut freq`))+
+  geom_boxplot()+
+  scale_y_log10()+
+  labs(x = 'construct', y='mutation frequency', title="ecoli delta ung")
+
+ggplot(constructs_mut, aes(x = reorder(construct, -`mut freq`), y = `mut freq`)) + 
+  geom_bar(stat='identity')
+
+ggplot(constructs_mut,
+       aes(x=construct, y=`mut freq`, fill=induction))+
+  geom_point(position = position_dodge(width = 0.9))+
+  geom_boxplot()+
+#  geom_point()+
+ # facet_wrap(~construct)+
+  scale_y_log10()+
+  labs(x = 'induction', y='mutation frequency', title="ecoli delta ung")
+```
+```{r}
+constructs_mut <- df %>% filter(induction=='induced') %>% group_by(construct, induction, iptg, `mut freq`) %>% summarize(n=n()) %>% drop_na()
+constructs_mut
+
+ggplot(constructs_mut,
+      aes(x = reorder(construct, -`mut freq`), y=`mut freq`))+
+  geom_point(aes(color=factor(iptg)))+
+#  geom_boxplot()+
+#  geom_point()+
+ # facet_wrap(~construct)+
+  scale_y_log10()+
+  labs(x = 'induction', y='mutation frequency', title="ecoli delta ung all induced")+
+  geom_hline(yintercept=4.665837e-08, color='red')
+
+hsapo <- constructs_mut %>% filter(construct=='HsAPOBEC2')
+hsapo$`mut freq` %>% mean()
+```
+```{r}
+constructs_mut <- df %>% group_by(construct, induction, iptg, `mut freq`) %>% summarize(n=n()) %>% drop_na()
+constructs_mut$induction <- factor(constructs_mut$induction, levels=c('uninduced', 'induced'))
+
+ggplot(constructs_mut,
+      aes(x = reorder(construct, -`mut freq`), y=`mut freq`, fill=induction))+
+  geom_point(position = position_dodge(width = 0.9))+
+  geom_boxplot()+
+#  geom_point()+
+ # facet_wrap(~construct)+
+  scale_y_log10()+
+  labs(x = 'induction', y='mutation frequency', title="ecoli delta ung all induced")+
+  geom_hline(yintercept=4.665837e-08, color='red')
+
+hsapo <- constructs_mut %>% filter(construct=='HsAPOBEC2')
+hsapo$`mut freq` %>% mean()
+```
+
+Check out 4/26 counts
+```{r}
+constructs_mut <- df %>% filter(date_counted == 4262023) %>% group_by(construct, induction, `mut freq`) %>% summarize(n=n()) %>% drop_na()
+
+constructs_mut$induction <- factor(constructs_mut$induction, levels=c('uninduced', 'induced'))
+
+ggplot(constructs_mut,
+      aes(x = reorder(construct, -`mut freq`), y=`mut freq`, fill=induction))+
+  geom_point(position = position_dodge(width = 0.9), aes(color=factor(induction)))+
+ # geom_boxplot()+
+#  geom_point()+
+ # facet_wrap(~construct)+
+  scale_y_log10()+
+  labs(x = 'induction', y='mutation frequency', title="ecoli delta ung all induced")+
+  geom_hline(yintercept=4.665837e-08, color='red')
+```
+
+Average with previous reps 
+```{r}
+constructs_mut <- df %>% #filter(construct %in% c('PmCDA1', 'HsAID', 'TAD1', 'CDAL1', 'HsAPOBEC2', 'CDAL4')) %>%
+  group_by(construct, induction, iptg, `mut freq`) %>% summarize(n=n()) %>% drop_na()
+constructs_mut$induction <- factor(constructs_mut$induction, levels=c('uninduced', 'induced'))
+
+ggplot(constructs_mut,
+      aes(x = reorder(construct, -`mut freq`), y=`mut freq`, fill=induction))+
+  geom_point(position = position_dodge(width = 0.9), alpha=0.5, size=1)+
+  geom_boxplot()+
+#  geom_point()+
+ # facet_wrap(~construct)+
+  scale_y_log10()+
+  labs(x='', y='Mutation Frequency', title="E. coli delta ung")+
+  scale_fill_manual(values=c('#6D87F8',  '#FF9D86'))+
+  geom_hline(yintercept=4.665837e-08, color='red')
+
+hsapo <- constructs_mut %>% filter(construct=='HsAPOBEC2')
+hsapo$`mut freq` %>% mean()
+```
+
+```{r}
+constructs_mut <- df %>% filter(construct %in% c('PmCDA1', 'HsAID', 'TAD1', 'CDAL1', 'HsAPOBEC2', 'CDAL6')) %>% group_by(construct, iptg, `mut freq`, induction) %>% summarize(n=n()) %>% drop_na()
+constructs_mut$induction <- factor(constructs_mut$induction, levels=c('uninduced', 'induced'))
+
+p1 <- ggplot(constructs_mut,
+      aes(x = reorder(construct, -`mut freq`), y=`mut freq`, fill=induction))+
+  geom_point(position = position_dodge(width = 0.9))+
+  geom_boxplot()+
+#  geom_point()+
+ # facet_wrap(~construct)+
+  scale_y_log10()+
+  labs(x='', y='Mutation Frequency')+
+ scale_fill_manual(values=c('#6D87F8', '#FF9D86'))+
+  labs(fill='IPTG Induction')+ 
+  scale_x_discrete(labels=c("PmCDA1" = "PmCDA1\n+", 
+                            "HsAID" = "HsAID\n+",
+                            'HsAPOBEC2'='HsAPOBEC2\n-'))+
+  theme_classic()
+
+ggsave(filename='C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\deaminase.png', plot=p1, dpi='retina', width=5.75, height=3.25)
+
+p1
+```
+
+```{r}
+constructs_mut <- df %>% filter(construct %in% c('PmCDA1', 'HsAID', 'TAD1', 'CDAL1', 'HsAPOBEC2', 'CDAL4')) %>% group_by(construct, iptg, induction, `mut freq`) %>% summarize(n=n()) %>% drop_na()
+#constructs_mut$induction <- factor(constructs_mut$induction, levels=c('uninduced', 'induced'))
+constructs_mut$induction <- factor(constructs_mut$induction, levels=c('uninduced', 'induced'))
+
+ggplot(constructs_mut,
+      aes(x = reorder(construct, -`mut freq`), y=`mut freq`, fill=induction))+
+  geom_point(position = position_dodge(width = 0.9))+
+  geom_boxplot()+
+#  geom_point()+
+ # facet_wrap(~construct)+
+  scale_y_log10()+
+  labs(x='', y='Mutation Frequency', title="E. coli delta ung")+
+  scale_fill_manual(values=c('#6D87F8',  '#FF9D86'))+
+  geom_hline(yintercept=4.771927e-08, color='red')
+```
+Check out 6/1/2023
+```{r}
+constructs_mut <- df %>% filter(date_counted == 622023) %>% 
+  group_by(construct, bio_rep, tech_rep, induction, `mut freq`) %>% 
+  summarize(n=n()) %>% drop_na()
+
+ggplot(constructs_mut,
+      aes(x = reorder(construct, -`mut freq`), y=`mut freq`))+
+  geom_point(position = position_dodge(width = 0.9), aes(color=bio_rep))+
+ # geom_boxplot()+
+#  geom_point()+
+ # facet_wrap(~construct)+
+  scale_y_log10()+
+  labs(x = 'Construct', y='mutation frequency', title="ecoli delta ung all induced")
+```
+```{r}
+df %>% filter(construct %in% c('PmCDA1', 'HsAID', 'TAD1', 'CDAL1', 'HsAPOBEC2', 'CDAL4')) %>%
+  filter(induction=='induced')%>%
+  group_by(date_counted, construct, bio_rep, induction, `mut freq`) %>% 
+  summarize(mut_freq=mean(`mut freq`)) %>% drop_na()
+
+df %>% filter(construct %in% c('PmCDA1', 'HsAID', 'TAD1', 'CDAL1', 'HsAPOBEC2', 'CDAL4')) %>%
+  filter(induction=='induced')%>%
+  group_by(date_counted, construct, bio_rep) %>% 
+  summarize(mut_freq=mean(`mut freq`, na.rm=TRUE)) %>% drop_na() %>%
+  group_by(construct) %>%
+  summarize(mean_mut=mean(mut_freq), median_mut=median(mut_freq), sd=sd(mut_freq), n=n())
+```
+
+
+```{r}
+constructs_mut <- df %>% filter(construct %in% c('PmCDA1', 'HsAID', 'TAD1', 'CDAL1', 'HsAPOBEC2', 'CDAL4')) %>%
+  filter(induction=='induced')%>%
+  group_by(date_counted, construct, bio_rep) %>% 
+  summarize(mut_freq=mean(`mut freq`, na.rm=TRUE)) %>% drop_na()
+
+ggplot(constructs_mut,
+      aes(x = reorder(construct, -mut_freq), y=mut_freq, fill=construct, label=date_counted))+
+  geom_point(position = position_dodge(width = 0.9), aes(color=construct))+
+  geom_text(hjust=0, vjust=0)+
+  scale_y_log10(breaks=trans_breaks("log10", function(x) 10^x),
+                labels=trans_format("log10",  math_format(.x)))+
+ # coord_trans(y='log10')+
+  geom_signif(comparisons=list(c('HsAPOBEC2', 'TAD1')), 
+              test=t.test, textsize=5)+
+  labs(x = 'Construct', y='mutation frequency', title="ecoli delta ung all induced")+
+  theme_bw()+
+  annotation_logticks(sides='l')
+
+```
+```{r}
+compare_means(mut_freq~construct, constructs_mut, method='t.test', paired=FALSE) %>% filter(group2=='HsAPOBEC2' | group1=='HsAPOBEC2')
+```
+
+```{r}
+#check today 
+df %>% filter(date_counted=='6162023' | date_counted=='9272023')
+constructs_mut <- df %>% filter(construct %in% c('HsAID', 'HsAID_C124A', 'TAD1', 'TAD1_C184A')) %>%
+  filter(induction=='induced')%>%
+  group_by(date_counted, construct, bio_rep) %>% 
+  summarize(mut_freq=mean(`mut freq`, na.rm=TRUE)) %>% drop_na()
+
+ggplot(constructs_mut,
+      aes(x = reorder(construct, -mut_freq), y=mut_freq, fill=construct, label=date_counted))+
+  geom_point(position = position_dodge(width = 0.9), aes(color=construct))+
+  geom_text(hjust=0, vjust=0)+
+  scale_y_log10(breaks=trans_breaks("log10", function(x) 10^x),
+                labels=trans_format("log10",  math_format(.x)))+
+  geom_signif(comparisons=list(c('TAD1', 'TAD1_C184A')), 
+              test=t.test, textsize=5)+
+  geom_signif(comparisons=list(c('TAD1_C184A', 'HsAID_C124A')), 
+              test=t.test, textsize=5)+
+  labs(x = 'Construct', y='mutation frequency', title="ecoli delta ung all induced")+
+  theme_bw()+
+  annotation_logticks(sides='l')
+
+constructs_mut$construct <- factor(constructs_mut$construct, levels=c('HsAID', 'HsAID_C124A', 'TAD1', 'TAD1_C184A'))
+ggplot(constructs_mut,
+      aes(x = construct, y=mut_freq, fill=construct))+
+  geom_boxplot()+
+  geom_point(position = position_dodge(width = 0.9))+
+  scale_y_log10(breaks=trans_breaks("log10", function(x) 10^x),
+                labels=trans_format("log10",  math_format(.x)))+
+  labs(x = 'Construct', y='mutation frequency', title="ecoli delta ung all induced")+
+  geom_signif(comparisons=list(c('TAD1', 'TAD1_C184A')), 
+              test=t.test, textsize=5)+
+  geom_signif(comparisons=list(c('HsAID', 'HsAID_C124A')), 
+              test=t.test, textsize=5)+
+  theme_bw()+
+  annotation_logticks(sides='l')
+
+df %>% filter(construct %in% c('HsAID', 'HsAID_C124A', 'TAD1', 'TAD1_C184A')) %>%
+  filter(induction=='induced')%>%
+  group_by(date_counted, construct, bio_rep) %>% 
+  summarize(mut_freq=mean(`mut freq`, na.rm=TRUE)) %>% drop_na() %>%
+  group_by(construct) %>%
+  summarize(mean_mut=mean(mut_freq), median_mut=median(mut_freq), sd=sd(mut_freq), n=n())
+```
+
