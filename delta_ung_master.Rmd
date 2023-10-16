@@ -252,22 +252,22 @@ constructs_mut <- df %>% filter(construct %in% c('HsAID', 'HsAID_C124A', 'TAD1',
   filter(induction=='induced')%>%
   group_by(date_counted, construct, bio_rep) %>% 
   summarize(mut_freq=mean(`mut freq`, na.rm=TRUE)) %>% drop_na()
-
+constructs_mut$construct <- factor(constructs_mut$construct, levels=c('HsAID', 'HsAID_C124A', 'TAD1', 'TAD1_C184A'))
 ggplot(constructs_mut,
-      aes(x = reorder(construct, -mut_freq), y=mut_freq, fill=construct, label=date_counted))+
+      aes(x=construct, y=mut_freq, fill=construct, label=date_counted))+
   geom_point(position = position_dodge(width = 0.9), aes(color=construct))+
   geom_text(hjust=0, vjust=0)+
   scale_y_log10(breaks=trans_breaks("log10", function(x) 10^x),
                 labels=trans_format("log10",  math_format(.x)))+
-  geom_signif(comparisons=list(c('TAD1', 'TAD1_C184A')), 
+  geom_signif(comparisons=list(c('HsAID', 'HsAID_C124A')), 
               test=t.test, textsize=5)+
-  geom_signif(comparisons=list(c('TAD1_C184A', 'HsAID_C124A')), 
+  geom_signif(comparisons=list(c('TAD1', 'TAD1_C184A')), 
               test=t.test, textsize=5)+
   labs(x = 'Construct', y='mutation frequency', title="ecoli delta ung all induced")+
   theme_bw()+
   annotation_logticks(sides='l')
 
-constructs_mut$construct <- factor(constructs_mut$construct, levels=c('HsAID', 'HsAID_C124A', 'TAD1', 'TAD1_C184A'))
+
 ggplot(constructs_mut,
       aes(x = construct, y=mut_freq, fill=construct))+
   geom_boxplot()+
