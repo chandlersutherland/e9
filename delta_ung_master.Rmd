@@ -16,7 +16,7 @@ library(scales)
 ```
 
 ```{r}
-df <- readxl::read_xlsx(path="C:\\Users\\chand\\Box Sync\\Krasileva_Lab\\Research\\chandler\\Krasileva Lab\\E9\\Colony_count_excel\\delta_ung_37_master.xlsx")
+df <- readxl::read_xlsx(path="delta_ung_37_master.xlsx")
 
 #remove too many or too few colonies
 #not doing now since hand wavey test anyway and would lose all rif data 

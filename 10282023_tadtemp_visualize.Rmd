@@ -1,0 +1,89 @@
+---
+title: "TAD1_temptrial"
+author: "LZ"
+date: "2023-10-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Temp
+
+Goal: plot temperature assay from 10/18
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(ggsignif)
+library(ggpubr)
+library(readxl)
+```
+
+```{r}
+df <- read_xlsx("TAD1_temp_trial.xlsx")
+head(df)
+```
+
+```{r}
+constructs_mut <- df %>% filter(construct %in% c('TAD1', 'TAD1_C184A')) %>%
+  group_by(construct, temperature) %>% 
+  summarize(mut_freq=mean(`mut_freq`, na.rm=TRUE)) %>% drop_na()
+
+constructs_mut$construct <- factor(constructs_mut$construct, levels=c('TAD1', 'TAD1_C184A'))
+ggplot(constructs_mut,
+      aes(x=construct, y=mut_freq, fill=construct, label=temperature))+
+  geom_point(position = position_dodge(width = 0.9), aes(color=construct))+
+  geom_text(hjust=0, vjust=0)+
+  scale_y_log10(breaks=trans_breaks("log10", function(x) 10^x),
+                labels=trans_format("log10",  math_format(.x)))+
+  labs(x = 'Construct', y='Mutation Frequency log(rif resistance cfu^-1)', title="ecoli delta ung all induced")+
+  theme_bw()+
+  annotation_logticks(sides='l')
+```
+
+```{r}
+temperature_mut <- df %>% filter(temperature %in% c('23', '28', '37')) %>%
+  group_by(temperature, construct) %>% 
+  summarize(mut_freq = mean(`mut_freq`, na.rm = TRUE)) %>% drop_na()
+
+temperature_mut$temperature <- factor(temperature_mut$temperature, levels = c('23', '28', '37'))
+ggplot(temperature_mut,
+      aes(x = temperature, y = mut_freq, fill = construct, label = construct)) +
+  geom_point(position = position_dodge(width = 0), aes(color = construct)) +
+  geom_text(hjust = 0, vjust = 0) +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(.x))) +
+  labs(x = 'Temperature', y = 'Mutation Frequency log(rif resistance cfu^-1)', title = "E. coli Delta ung all induced") +
+  theme_bw() +
+  annotation_logticks(sides = 'l')
+```
+
+```{r}
+ggplot(constructs_mut,
+      aes(x = construct, y=mut_freq, fill=construct))+
+  geom_boxplot()+
+  geom_point(position = position_dodge(width = 0.9))+
+  scale_y_log10(breaks=trans_breaks("log10", function(x) 10^x),
+                labels=trans_format("log10",  math_format(.x)))+
+  labs(x = 'Construct', y='mutation frequency', title="ecoli delta ung all induced")+
+  geom_signif(comparisons=list(c('TAD1', 'TAD1_C184A')), 
+              test=t.test, textsize=5)+
+  theme_bw()+
+  annotation_logticks(sides='l')
+```
+
+```{r}
+ggplot(temperature_mut,
+       aes(x = temperature, y = mut_freq, fill = temperature)) +
+  geom_boxplot() +
+  geom_point(position = position_dodge(width = 0.9)) +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(.x))) +
+  labs(x = 'Temperature', y = 'Mutation Frequency', title = "E. coli Delta ung all induced") +
+  geom_signif(comparisons = list(c('23', '28', '37')),
+              test = t.test, textsize = 5) +
+  theme_bw() +
+  annotation_logticks(sides = 'l')
+```
