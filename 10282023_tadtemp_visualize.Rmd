@@ -19,6 +19,7 @@ library(ggplot2)
 library(ggsignif)
 library(ggpubr)
 library(readxl)
+library(scales)
 ```
 
 ```{r}
@@ -27,11 +28,11 @@ head(df)
 ```
 
 ```{r}
-constructs_mut <- df %>% filter(construct %in% c('TAD1', 'TAD1_C184A')) %>%
+constructs_mut <- df %>% filter(construct %in% c('TAD1', 'TAD1_C184A', 'HsAID')) %>%
   group_by(construct, temperature) %>% 
   summarize(mut_freq=mean(`mut_freq`, na.rm=TRUE)) %>% drop_na()
 
-constructs_mut$construct <- factor(constructs_mut$construct, levels=c('TAD1', 'TAD1_C184A'))
+constructs_mut$construct <- factor(constructs_mut$construct, levels=c('TAD1', 'TAD1_C184A', 'HsAID'))
 ggplot(constructs_mut,
       aes(x=construct, y=mut_freq, fill=construct, label=temperature))+
   geom_point(position = position_dodge(width = 0.9), aes(color=construct))+
@@ -42,6 +43,86 @@ ggplot(constructs_mut,
   theme_bw()+
   annotation_logticks(sides='l')
 ```
+```{r}
+constructs_mut <- df %>%
+  filter(construct %in% c('TAD1', 'TAD1_C184A', 'HsAID'), temperature %in% c('23'))
+
+constructs_mut$construct <- factor(constructs_mut$construct, levels=c('TAD1', 'TAD1_C184A', 'HsAID'))
+ggplot(constructs_mut,
+      aes(x=construct, y=mut_freq, fill=construct, label=temperature))+
+  geom_point(position = position_dodge(width = 0.9), aes(color=construct))+
+  geom_text(hjust=0, vjust=0)+
+  scale_y_log10(breaks=trans_breaks("log10", function(x) 10^x),
+                labels=trans_format("log10",  math_format(.x)))+
+  labs(x = 'Construct', y='Mutation Frequency log(rif resistance cfu^-1)', title="ecoli delta ung all induced")+
+  theme_bw()+
+  annotation_logticks(sides='l')
+```
+
+```{r}
+constructs_mut <- df %>%
+  filter(construct %in% c('TAD1', 'TAD1_C184A', 'HsAID'), temperature %in% c('23'))
+
+constructs_mut$construct <- factor(constructs_mut$construct, levels=c('TAD1', 'TAD1_C184A', 'HsAID'))
+
+ggplot(constructs_mut,
+      aes(x=construct, y=mut_freq, fill=construct)) +
+  geom_point(position = position_dodge(width = 0.9), aes(color=construct)) +
+  scale_y_log10(breaks=trans_breaks("log10", function(x) 10^x),
+                labels=trans_format("log10",  math_format(.x))) +
+  labs(x = 'Construct', y='Mutation Frequency log(rif resistance cfu^-1)', title="ecoli delta ung all induced") +
+  theme_bw() +
+  annotation_logticks(sides='l')
+
+```
+
+```{r}
+df <- read_xlsx("TAD1_temp_trial.xlsx")
+df2 <- read_xlsx("delta_ung_37_master.xlsx")
+value_to_keep_construct <- 'HsAID'
+values_to_keep_induction <- 'induced'
+mask_induction <- df2$induction %in% values_to_keep_induction
+mask_construct <- df2$construct == value_to_keep_construct
+combined_mask <- mask_induction & mask_construct
+df2 <- subset(df2, combined_mask)
+df3 <- rbind(df, df2)
+head(df3)
+```
+```{r}
+constructs_mut <- df3 %>%
+  filter(construct %in% c('HsAID', 'TAD1', 'TAD1_C184A'))
+
+constructs_mut$construct <- factor(constructs_mut$construct, levels=c('HsAID', 'TAD1', 'TAD1_C184A'))
+ggplot(constructs_mut,
+      aes(x=construct, y=mut_freq, fill=construct, label=temperature))+
+  geom_point(position = position_dodge(width = 0.9), aes(color=construct))+
+  geom_text(hjust=0, vjust=0)+
+  scale_y_log10(breaks=trans_breaks("log10", function(x) 10^x),
+                labels=trans_format("log10",  math_format(.x)))+
+  labs(x = 'Construct', y='Mutation Frequency log(rif resistance cfu^-1)', title="ecoli delta ung all induced")+
+  theme_bw()+
+  annotation_logticks(sides='l')
+```
+
+```{r}
+# jittered plot
+constructs_mut <- df3 %>%
+  filter(construct %in% c('HsAID', 'TAD1', 'TAD1_C184A'))
+
+constructs_mut$construct <- factor(constructs_mut$construct, levels=c('HsAID', 'TAD1', 'TAD1_C184A'))
+
+ggplot(constructs_mut,
+       aes(x=construct, y=mut_freq, fill=construct, label=temperature)) +
+  geom_point(position = position_jitter(width = 0.2), aes(color=construct)) +
+  geom_text(position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.9),
+            hjust=0, vjust=0) +
+  scale_y_log10(breaks=trans_breaks("log10", function(x) 10^x),
+                labels=trans_format("log10",  math_format(.x))) +
+  labs(x = 'Construct', y='Mutation Frequency log(rif resistance cfu^-1)', title="ecoli delta ung all induced") +
+  theme_bw() +
+  annotation_logticks(sides='l')
+```
+
 
 ```{r}
 temperature_mut <- df %>% filter(temperature %in% c('23', '28', '37')) %>%
@@ -82,8 +163,6 @@ ggplot(temperature_mut,
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
                 labels = trans_format("log10", math_format(.x))) +
   labs(x = 'Temperature', y = 'Mutation Frequency', title = "E. coli Delta ung all induced") +
-  geom_signif(comparisons = list(c('23', '28', '37')),
-              test = t.test, textsize = 5) +
   theme_bw() +
   annotation_logticks(sides = 'l')
 ```
